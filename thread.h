@@ -4,6 +4,8 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include <kernel/list.h> //ADDED
+
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -98,6 +100,8 @@ struct thread
     //END MODIFICATION
     /* Shared betweenmak thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
+    
+    int64_t waketick; //ADDED number of ticks before thread is active
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -143,5 +147,7 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+bool cmp_waketick(struct list_elem *first, struct list_elem *second, void *aux); // ADDED defines function
 
 #endif /* threads/thread.h */
