@@ -92,7 +92,8 @@ struct thread
     //BEGIN MODIFICATION
     struct list_elem donors;  
     struct list_elem donor_elem;
-    struct thread* locking_thread;         
+    struct thread* locking_thread;
+    struct lock* blocked;
     int old_priority;
     //END MODIFICATION
     /* Shared betweenmak thread.c and synch.c. */

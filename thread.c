@@ -199,11 +199,13 @@ thread_create (const char *name, int priority,
   sf->ebp = 0;
 
   /* Add to run queue. */
+  //BEGIN MODIFICATION
   thread_unblock (t);
   struct thread * current = thread_current();
   if(priority>current->priority){
     thread_yield();
   }
+  //END MODIFICATION
   return tid;
 }
 
@@ -311,6 +313,8 @@ thread_yield (void)
   old_level = intr_disable ();
   if (cur != idle_thread)
   {
+    //list_push_back(&ready_list, &cur->elem);
+    //list_sort(&ready_list, priority_less, NULL);
     //BEGIN MODIFICATION
     if (!list_empty(&ready_list))
     {
@@ -323,6 +327,9 @@ thread_yield (void)
       }
     }
   }
+  //cur->status = THREAD_READY;
+  //schedule();
+  
 //END MODIFICATION
 
   intr_set_level (old_level);
@@ -349,12 +356,12 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  enum intr_level old_level = intr_disable ();
+   /* enum intr_level old_level = intr_disable ();
     thread_current ()->priority = new_priority;
     thread_yield();
-    intr_set_level (old_level);
+    intr_set_level (old_level);*/
   //BEGIN MODIFICATION
-  /*enum intr_level old_level;
+  enum intr_level old_level;
   old_level = intr_disable ();
   
   if(list_empty(&thread_current()->donors))
@@ -371,7 +378,11 @@ thread_set_priority (int new_priority)
       
     }
    
-    struct thread* highest_donor = list_entry(list_front(&thread_current ()->donors), struct thread, donor_elem);
+    
+  }
+  if(!list_empty(&ready_list))
+  {
+    struct thread* highest_donor = list_entry(list_front(&ready_list), struct thread, donor_elem);
     if(&thread_current()->priority<=highest_donor->priority)
     {
       //thread_current()->priority = highest_donor->priority;
@@ -379,7 +390,7 @@ thread_set_priority (int new_priority)
     }
   }
   //thread_yield();
-  intr_set_level (old_level);*/
+  intr_set_level (old_level);
   //END MODIFICATION
   
 }
