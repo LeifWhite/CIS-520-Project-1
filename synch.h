@@ -44,7 +44,11 @@ void cond_broadcast (struct condition *, struct lock *);
 //BEGIN MODIFICATION
 bool priority_less_cond(const struct list_elem *,const struct list_elem *, void *);
 //END MODIFICATION
+//BEGIN MODIFICATION
+bool priority_less(const struct list_elem *, const struct list_elem *, void *);
+//END MODIFICATION
 /* Optimization barrier.
+
    The compiler will not reorder operations across an
    optimization barrier.  See "Optimization Barriers" in the
    reference guide for more information.*/
