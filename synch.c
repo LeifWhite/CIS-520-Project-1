@@ -292,51 +292,40 @@ lock_release (struct lock *lock)
   //probably not necessary to put this line in, but just in case
 if(!thread_mlfqs)
   {
-  if(list_empty(&thread_current()->donors))
-  {
-    thread_set_priority(thread_current()->old_priority);
-  }
-  else
-  {
-    struct list_elem *e;
-    //Iterates through the list of donor threads and removes them all
-    for (e = list_begin (&thread_current()->donors); e != list_end (&thread_current()->donors);
-           e = list_next (e))
-      {
-      struct thread *donating_thread = list_entry(e, struct thread, donor_elem);
-      if(donating_thread->blocked == lock)
-      {
-        list_remove(e);
-        donating_thread->blocked = NULL;
-      }
-     
-    }
-  }
-
-
-    //If the list of donors is not empty
-    if(!list_empty(&thread_current()->donors))
-    {
-      //Find the thread in the list of donors which has the highest priority
-      struct list_elem *max_donor_elem = list_max(&thread_current()->donors, priority_less, NULL);
-
-      struct thread *max_donor = list_entry(max_donor_elem, struct thread, donor_elem);
-      //If this priority is higher than the base priority of the current thread, the current thread's priority becomes its old base priority
-      if(thread_current()->old_priority > max_donor->priority)
-      {
-        thread_set_priority(thread_current()->old_priority);
-      }
-      //otherwise, set the current thread's priority to the highest priority donor
-      else
-      {
-        thread_current()->priority = max_donor->priority;
-        thread_yield();
-      }
-    }
-    //If no donors, current thread priority = old priority
+    if(list_empty(&thread_current()->donors))
+      thread_set_priority(thread_current()->old_priority);
     else
     {
-      thread_set_priority(thread_current()->old_priority);
+      struct list_elem *e;
+
+      for (e = list_begin (&thread_current()->donors); e != list_end (&thread_current()->donors);
+           e = list_next (e))
+      {
+
+        struct thread *f = list_entry (e, struct thread, donor_elem);
+        if(f->blocked == lock)
+        {
+          list_remove(e);
+          f->blocked = NULL;
+
+        }
+      }
+
+      if(!list_empty(&thread_current()->donors))
+      {
+        struct list_elem *max_donor = list_max(&thread_current()->donors, priority_less, NULL);
+        struct thread *max_donor_thread = list_entry(max_donor, struct thread, donor_elem);
+
+        if(thread_current()->old_priority > max_donor_thread->priority)
+          thread_set_priority(thread_current()->old_priority);
+        else
+        {
+          thread_current()->priority = max_donor_thread->priority;
+          thread_yield();
+        }
+      }
+      else
+        thread_set_priority(thread_current()->old_priority);
     }
   }
   intr_set_level(old_level);
