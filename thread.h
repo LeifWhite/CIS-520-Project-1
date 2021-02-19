@@ -6,7 +6,6 @@
 #include <stdint.h>
 #include <kernel/list.h> //ADDED
 
-
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -76,6 +75,12 @@ typedef int tid_t;
    only because they are mutually exclusive: only a thread in the
    ready state is on the run queue, whereas only a thread in the
    blocked state is on a semaphore wait list. */
+
+
+
+
+
+
 struct thread
   {
     /* Owned by thread.c. */
@@ -86,7 +91,7 @@ struct thread
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
     //BEGIN MODIFICATION
-    struct list_elem donors;  
+    struct list donors;  
     struct list_elem donor_elem;
     struct thread* locking_thread;
     struct lock* blocked;
@@ -113,6 +118,8 @@ struct thread
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
+//Begin Modification
+int load_avg;
 
 void thread_init (void);
 void thread_start (void);

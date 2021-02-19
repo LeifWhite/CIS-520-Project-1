@@ -28,7 +28,6 @@
 #include <string.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
-
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
    manipulating it:
@@ -201,26 +200,35 @@ lock_acquire (struct lock *lock)
   //BEGIN MODIFICATION
   enum intr_level old_level;
   old_level = intr_disable ();
-  if(lock->holder)
+  //If not thread mlfqs
+  if(!thread_mlfqs)
   {
-  thread_current()->locking_thread = lock->holder;
-  list_push_front(&lock->holder->donors, &thread_current()->donor_elem);
- 
-  thread_current()->blocked = lock;
-   struct thread *tc = thread_current();
-  while(tc->locking_thread!=NULL)
-      {
-        if(tc->priority > tc->locking_thread->priority)
+    //If the lock holder thread is not null
+    if(lock->holder)
+    {
+      //Set the thread locking the current thread to the lock holder
+    thread_current()->locking_thread = lock->holder;
+    //Push the donor element from the current thread to the front of the donors list
+    list_push_front(&lock->holder->donors, &thread_current()->donor_elem);
+  
+    thread_current()->blocked = lock;
+    struct thread *tc = thread_current();
+    //Creates a temporary thread and modifies that thread's priority as long as the locking thread isn't null
+    //This is used for nested donation as it iterates down the locking thread chain, giving the highest priority to the original element
+    while(tc->locking_thread!=NULL)
         {
-          tc->locking_thread->priority = tc->priority;
-          tc = tc->locking_thread;
-        }
+          if(tc->priority > tc->locking_thread->priority)
+          {
+            tc->locking_thread->priority = tc->priority;
+            tc = tc->locking_thread;
+          }
 
-      }
-  }
-  else
-  {
-    thread_current()->locking_thread = NULL;
+        }
+    }
+    else
+    {
+      thread_current()->locking_thread = NULL;
+    }
   }
   //END MODIFICATION
   sema_down (&lock->semaphore);
@@ -247,10 +255,12 @@ lock_try_acquire (struct lock *lock)
     //BEGIN MODIFICATIONs
   else
   {
+    
     thread_current()->locking_thread = lock->holder;
     list_push_front(&lock->holder->donors, &thread_current()->donor_elem);
     thread_current()->blocked = lock;
     struct thread *tc = thread_current();
+    //Again, this is for nested donation
     while(tc->locking_thread!=NULL)
     {
       if(tc->priority > tc->locking_thread->priority)
@@ -279,7 +289,9 @@ lock_release (struct lock *lock)
   lock->holder = NULL;
   
   sema_up (&lock->semaphore);
-
+  //probably not necessary to put this line in, but just in case
+if(!thread_mlfqs)
+  {
   if(list_empty(&thread_current()->donors))
   {
     thread_set_priority(thread_current()->old_priority);
@@ -287,24 +299,28 @@ lock_release (struct lock *lock)
   else
   {
     struct list_elem *e;
-    e = list_begin(&thread_current()->donors);
-    while(e!=list_end(&thread_current()->donors))
-    {
+    //Iterates through the list of donor threads and removes them all
+    for (e = list_begin (&thread_current()->donors); e != list_end (&thread_current()->donors);
+           e = list_next (e))
+      {
       struct thread *donating_thread = list_entry(e, struct thread, donor_elem);
       if(donating_thread->blocked == lock)
       {
         list_remove(e);
         donating_thread->blocked = NULL;
       }
-      e = list_next(e);
+     
     }
+  }
 
 
     //If the list of donors is not empty
     if(!list_empty(&thread_current()->donors))
     {
       //Find the thread in the list of donors which has the highest priority
-      struct thread *max_donor = list_entry(list_max(&thread_current()->donors, priority_less, NULL), struct thread, donor_elem);
+      struct list_elem *max_donor_elem = list_max(&thread_current()->donors, priority_less, NULL);
+
+      struct thread *max_donor = list_entry(max_donor_elem, struct thread, donor_elem);
       //If this priority is higher than the base priority of the current thread, the current thread's priority becomes its old base priority
       if(thread_current()->old_priority > max_donor->priority)
       {
@@ -344,7 +360,7 @@ struct semaphore_elem
     struct list_elem elem;              /* List element. */
     struct semaphore semaphore;         /* This semaphore. */
     //BEGIN MODIFICATION
-     struct thread *owner;
+     //struct thread *owner;
      //END MODIFICATION
   };
 
@@ -412,11 +428,14 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
   ASSERT (lock_held_by_current_thread (lock));
 
   if (!list_empty (&cond->waiters)) 
+  {
   //Begin Modification
   list_sort(&cond->waiters, priority_less_cond, NULL);
-  //End Modification
+  
     sema_up (&list_entry (list_pop_front (&cond->waiters),
                           struct semaphore_elem, elem)->semaphore);
+    //End Modification
+  }
 }
 
 /* Wakes up all threads, if any, waiting on COND (protected by
@@ -441,6 +460,4 @@ bool priority_less_cond( struct list_elem *e1, struct list_elem *e2, void *aux)
    return list_entry(list_front(&asem->semaphore.waiters), struct thread, elem)->priority>list_entry(list_front(&bsem->semaphore.waiters), struct thread, elem)->priority;
    // return list_entry(e1, struct semaphore_elem, elem)->owner->priority > list_entry(e2, struct semaphore_elem, elem)->owner->priority;
 }
-
-
 //END MODIFICATION
