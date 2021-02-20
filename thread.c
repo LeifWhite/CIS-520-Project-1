@@ -58,10 +58,7 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 bool thread_mlfqs;
-int load_avg;
-//BEGIN MODIFICATION
-extern struct list sleep_list;
-//END MOFICIATION
+
 static void kernel_thread (thread_func *, void *aux);
 
 static void idle (void *aux UNUSED);
@@ -136,42 +133,6 @@ thread_tick (void)
 #endif
   else
     kernel_ticks++;
-
-/*if(thread_mlfqs)
-  {
-    if(strcmp(t->name,"idle")!=0)
-    {
-      t->recent_cpu = addin(t->recent_cpu, 1);
-    }
-
-    if(timer_ticks() % 100 == 0)
-    {
-      struct list_elem *e;
-      int temp, i=0;
-
-      load_avg = addfx(divin(mulin(load_avg, 59), 60), divin(tofxpt(list_size(&ready_list) + (strcmp(running_thread()->name,"idle")==0?0:1)), 60));
-
-      temp = divfx(mulin(load_avg, 2),addin(mulin(load_avg, 2), 1));
-
-      for (e = list_begin (&all_list); e != list_end (&all_list);
-         e = list_next (e))
-      {
-        struct thread *f = list_entry (e, struct thread, allelem);
-        f->recent_cpu = addin(mulfx(temp, f->recent_cpu),f->nice);
-      }
-    }
-
-    if(timer_ticks() % 4 == 0)
-    {
-      struct list_elem *e;
-      for (e = list_begin (&all_list); e != list_end (&all_list);
-         e = list_next (e))
-      {
-        struct thread *f = list_entry (e, struct thread, allelem);
-        f->priority = PRI_MAX - tointround(divin(f->recent_cpu,4)) - (f->nice * 2);
-      }
-    }
-  }*/
 
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
@@ -398,7 +359,7 @@ thread_foreach (thread_action_func *func, void *aux)
       struct thread *t = list_entry (e, struct thread, allelem);
       func (t, aux);
     }
-}
+} 
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
@@ -414,13 +375,13 @@ thread_set_priority (int new_priority)
   
   if(list_empty(&thread_current()->donors))
   {
-    thread_current ()->priority = new_priority;
-    thread_current ()->old_priority = new_priority;
+    thread_current()->priority = new_priority;
+    thread_current()->old_priority = new_priority;
   }
-  else if(new_priority>thread_current()->priority)
+  else if(new_priority > thread_current()->priority)
   {
-      thread_current ()->priority = new_priority;
-      thread_current ()->old_priority = new_priority;
+      thread_current()->priority = new_priority;
+      thread_current()->old_priority = new_priority;
   }
   else 
   {
@@ -554,8 +515,7 @@ static void
 init_thread (struct thread *t, const char *name, int priority)
 {
   
-
-  ASSERT (t != NULL);
+ASSERT (t != NULL);
   ASSERT (PRI_MIN <= priority && priority <= PRI_MAX);
   ASSERT (name != NULL);
 

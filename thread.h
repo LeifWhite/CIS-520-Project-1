@@ -91,19 +91,21 @@ struct thread
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
     //BEGIN MODIFICATION
-    struct list donors;  
+    struct list_elem elem;              /* List element. */
     struct list_elem donor_elem;
-    struct thread* locking_thread;
-    struct lock* blocked;
+    int64_t waketick; //ADDED number of ticks before thread is active   
     int old_priority;
+    struct thread *locking_thread;
+
+    struct list donors;  
+    
+
+    struct lock *blocked;
+
     //END MODIFICATION
     /* Shared betweenmak thread.c and synch.c. */
-    struct list_elem elem;              /* List element. */
-    //Begin Modification
-    int nice;
-    int recent_cpu;
-    //End Modification
-    int64_t waketick; //ADDED number of ticks before thread is active
+   
+    
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -119,7 +121,6 @@ struct thread
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
 //Begin Modification
-int load_avg;
 
 void thread_init (void);
 void thread_start (void);
@@ -153,5 +154,5 @@ int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
 bool cmp_waketick(struct list_elem *first, struct list_elem *second, void *aux); // ADDED defines function
-bool priority_less(struct list_elem *,struct list_elem *, void *);
+bool priority_less(struct list_elem *first,struct list_elem *second, void *aux);
 #endif /* threads/thread.h */
