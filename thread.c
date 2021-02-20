@@ -206,11 +206,12 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
-
+//BEGIN MODIFICATION
   old_level = intr_disable ();
+  //If the thread created has highest priority, current thread should yield to it
   if(t->priority > thread_current()->priority)
     thread_yield();
-
+//END MODIFICATION
   intr_set_level (old_level);
 
   return tid;
@@ -365,40 +366,38 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-   /* enum intr_level old_level = intr_disable ();
-    thread_current ()->priority = new_priority;
-    thread_yield();
-    intr_set_level (old_level);*/
+   
   //BEGIN MODIFICATION
   enum intr_level old_level;
   old_level = intr_disable ();
-  
-  if(list_empty(&thread_current()->donors))
+  //Followed based off of the pintos reference guide tutorial
+  //Situation 1: Current thread hasn't been donated. So we set both old and new priorities, 
+  //Same code would execute if we have donors, but the new priority is high enough that it doesn't matter
+  if(list_empty(&thread_current()->donors) || new_priority > thread_current()->priority)
   {
     thread_current()->priority = new_priority;
     thread_current()->old_priority = new_priority;
   }
-  else if(new_priority > thread_current()->priority)
-  {
-      thread_current()->priority = new_priority;
-      thread_current()->old_priority = new_priority;
-  }
+  //Situation 2: Current thread has been donated. But we need to set priority now. 
+  //If the new priority is less than the priority that the thread get by donating. We only need to set old_priority.
   else 
   {
     thread_current()->old_priority = new_priority;
   }
+  //If there are other threads ready to run
   if(!list_empty(&ready_list))
   {
+    //Find the readiest thread
     struct list_elem *front = list_front(&ready_list);
     struct thread *highest_donor = list_entry(front, struct thread, elem);
+    //If that thread has a higher priority than we do
     if(highest_donor->priority > thread_current()->priority)
     {
-      //thread_current()->priority = highest_donor->priority;
+      //Let it run first
       thread_yield();
     }
     
   }
-  //thread_yield();
   intr_set_level (old_level);
   //END MODIFICATION
   
@@ -643,15 +642,7 @@ allocate_tid (void)
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
-//ADDED METHOD
-bool cmp_waketick(struct list_elem *first, struct list_elem *second, void *aux)
-{
-  struct thread *fthread = list_entry (first, struct thread, elem); //ADDED sets first thread
-  struct thread *sthread = list_entry (second, struct thread, elem); //ADDED sets second thread
-
-  return fthread->waketick < sthread->waketick; //ADDED if first thread has less time before it goes than the second
-
-} 
+//ADDED METHOD, determines which thread has a higher priority, used to sort priority based queue
 
 bool priority_less(struct list_elem *e1, struct list_elem *e2, void *aux)
 { 

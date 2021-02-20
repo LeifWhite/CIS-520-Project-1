@@ -92,15 +92,15 @@ struct thread
     struct list_elem allelem;           /* List element for all threads list. */
     //BEGIN MODIFICATION
     struct list_elem elem;              /* List element. */
-    struct list_elem donor_elem;
+    struct list_elem donor_elem;        /* Donor list element*/
     int64_t waketick; //ADDED number of ticks before thread is active   
-    int old_priority;
-    struct thread *locking_thread;
+    int old_priority;                   /*Pre-donation priority*/
+    struct thread *locking_thread;      /*What thread, if any, is locking this one in place*/
 
-    struct list donors;  
+    struct list donors;                 /*What threads are donating their priority (or could be)*/
     
 
-    struct lock *blocked;
+    struct lock *blocked;              /*What lock is blocking this thread?*/
 
     //END MODIFICATION
     /* Shared betweenmak thread.c and synch.c. */
@@ -153,6 +153,5 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
-bool cmp_waketick(struct list_elem *first, struct list_elem *second, void *aux); // ADDED defines function
 bool priority_less(struct list_elem *first,struct list_elem *second, void *aux);
 #endif /* threads/thread.h */

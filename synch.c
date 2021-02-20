@@ -194,24 +194,25 @@ lock_acquire (struct lock *lock)
 //Begin modification
   enum intr_level old_level = intr_disable ();
 
-  if(lock->holder)
-  {
+  //If the lock holder thread is not null
+    if(lock->holder)
+    {
+      //Set the thread locking the current thread to the lock holder
     thread_current()->locking_thread = lock->holder;
-
-    list_push_front(&lock->holder->donors,&thread_current()->donor_elem);
+    //Push the donor element from the current thread to the front of the donors list
+    list_push_front(&lock->holder->donors, &thread_current()->donor_elem);
 
     thread_current()->blocked = lock;
-
-    struct thread *temp = thread_current();
-
-
-    while(temp->locking_thread!=NULL)
+    struct thread *tc = thread_current();
+    //Creates a temporary thread and modifies that thread's priority as long as the locking thread isn't null
+    //This is used for nested donation as it iterates down the locking thread chain, giving the highest priority to the original element
+    while(tc->locking_thread!=NULL)
     {
-      if(temp->priority > temp->locking_thread->priority)
-      {
-        temp->locking_thread->priority = temp->priority;
-        temp = temp->locking_thread;
-      }
+     if(tc->priority > tc->locking_thread->priority)
+          {
+            tc->locking_thread->priority = tc->priority;
+            tc = tc->locking_thread;
+          }
 
     }
   }
@@ -239,19 +240,21 @@ lock_try_acquire (struct lock *lock)
   ASSERT (!lock_held_by_current_thread (lock));
 
   success = sema_try_down (&lock->semaphore);
+  //BEGIN MODIFICATION
   if (success)
     lock->holder = thread_current ();
   else
   {
+    //The thread locking this down is the thread holding the lock
     thread_current()->locking_thread = lock->holder;
-
+    //Push the donor element to the front of the current locking thread's donor list
     list_push_front(&lock->holder->donors,&thread_current()->donor_elem);
-
+    
     thread_current()->blocked = lock;
 
     struct thread *temp = thread_current();
 
-
+  //Again, this is for nested donation
     while(temp->locking_thread!=NULL)
     {
       if(temp->priority > temp->locking_thread->priority)
@@ -263,6 +266,7 @@ lock_try_acquire (struct lock *lock)
     }
 
   }
+  //END MODIFICATION
   return success;
 }
 
@@ -281,15 +285,17 @@ lock_release (struct lock *lock)
   lock->holder = NULL;
 
   sema_up (&lock->semaphore);
-
+  //BEGIN MODIFICATION
+//Set to default priority if there are no donors
   if(list_empty(&thread_current()->donors))
     thread_set_priority(thread_current()->old_priority);
   else
   {
     struct list_elem *e;
 
-    for (e = list_begin (&thread_current()->donors); e != list_end (&thread_current()->donors);
-         e = list_next (e))
+     e = list_begin(&thread_current()->donors);
+  //Iterates through the list of donor threads and removes them all
+    while(e!=list_end(&thread_current()->donors))
     {
 
       struct thread *f = list_entry (e, struct thread, donor_elem);
@@ -299,25 +305,28 @@ lock_release (struct lock *lock)
         f->blocked = NULL;
 
       }
-    }
+     e = list_next(e);
 
+    }
+    //If the list of donors is not empty
     if(!list_empty(&thread_current()->donors))
     {
-      struct list_elem *max_donor = list_max(&thread_current()->donors, priority_less, NULL);
-      struct thread *max_donor_thread = list_entry(max_donor, struct thread, donor_elem);
+      //Find the thread in the list of donors which has the highest priority
+      struct thread *max_donor = list_entry(list_max(&thread_current()->donors, priority_less, NULL), struct thread, donor_elem);
 
-      if(thread_current()->old_priority > max_donor_thread->priority)
+    //If this priority is higher than the base priority of the current thread, the current thread's priority becomes its old base priority
+      if(thread_current()->old_priority > max_donor->priority)
         thread_set_priority(thread_current()->old_priority);
       else
       {
-        thread_current()->priority = max_donor_thread->priority;
+        thread_current()->priority = max_donor->priority;
         thread_yield();
       }
     }
     else
       thread_set_priority(thread_current()->old_priority);
   }
-
+//END MODIFICATION
   intr_set_level (old_level);
 }
 
