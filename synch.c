@@ -195,8 +195,8 @@ lock_acquire (struct lock *lock)
   enum intr_level old_level = intr_disable ();
 
   //If the lock holder thread is not null
-    if(lock->holder)
-    {
+  if(lock->holder)
+  {
       //Set the thread locking the current thread to the lock holder
     thread_current()->locking_thread = lock->holder;
     //Push the donor element from the current thread to the front of the donors list
@@ -206,17 +206,20 @@ lock_acquire (struct lock *lock)
     struct thread *tc = thread_current();
     //Creates a temporary thread and modifies that thread's priority as long as the locking thread isn't null
     //This is used for nested donation as it iterates down the locking thread chain, giving the highest priority to the original element
-    while(tc->locking_thread!=NULL)
+    //This limits to a depth of 8 
+    int i=0;
+    while(tc->locking_thread!=NULL &&i<8)
     {
      if(tc->priority > tc->locking_thread->priority)
-          {
+      {
             tc->locking_thread->priority = tc->priority;
             tc = tc->locking_thread;
-          }
+      }
+      i+=1;
 
     }
   }
-  else
+    else
     thread_current()->locking_thread = NULL;
 
 
@@ -252,16 +255,18 @@ lock_try_acquire (struct lock *lock)
     
     thread_current()->blocked = lock;
 
-    struct thread *temp = thread_current();
+    struct thread *tc = thread_current();
 
-  //Again, this is for nested donation
-    while(temp->locking_thread!=NULL)
+  //Again, this is for nested donation with depth of 8
+  int i =0;
+    while(tc->locking_thread!=NULL && i<8)
     {
-      if(temp->priority > temp->locking_thread->priority)
+      if(tc->priority > tc->locking_thread->priority)
       {
-        temp->locking_thread->priority = temp->priority;
-        temp = temp->locking_thread;
+        tc->locking_thread->priority = tc->priority;
+        tc = tc->locking_thread;
       }
+      i+=1;
 
     }
 
@@ -294,15 +299,16 @@ lock_release (struct lock *lock)
     struct list_elem *e;
 
      e = list_begin(&thread_current()->donors);
-  //Iterates through the list of donor threads and removes them all
+  //Iterates through the list of donor threads and removes threads from the
+  //potential donors list whos blocked thread is the lock parameter
     while(e!=list_end(&thread_current()->donors))
     {
 
-      struct thread *f = list_entry (e, struct thread, donor_elem);
-      if(f->blocked == lock)
+      struct thread *tc = list_entry (e, struct thread, donor_elem);
+      if(tc->blocked == lock)
       {
         list_remove(e);
-        f->blocked = NULL;
+        tc->blocked = NULL;
 
       }
      e = list_next(e);

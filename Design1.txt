@@ -1,5 +1,8 @@
-﻿---- GROUP ----
 
+CIS 520 - Programming Project #1
+
+                   
+---- GROUP ----
 
 Leif White leifw@ksu.edu
 William Compton will12@ksu.edu
@@ -8,75 +11,156 @@ Trevor Reynolds tjr2020@ksu.edu
 
 ---- PRELIMINARIES ----
 
-
 >> If you have any preliminary comments on your submission, notes for
 >> the TA, or extra credit, please give them here.
-
 
 >> Please cite any offline or online sources you consulted while
 >> preparing your submission, other than the Pintos documentation,
 >> course text, lecture notes, and course staff.
 
-
 * https://github.com/Waqee/Pintos-Project-1
+* https://jeason.gitbooks.io/pintos-reference-guide-sysu/content/priority_donating.html
+* https://www.researchgate.net/publication/313846154_PintOS-T02_Priority_Scheduling_of_Kernel_Threads_with_Priority_Donation_--_A_Guide_for_Students
+* https://programmersought.com/article/23326455301/
 
 
                  ALARM CLOCK
                  ===========
 
-
 ---- DATA STRUCTURES ----
-
 
 >> A1: Copy here the declaration of each new or changed `struct' or
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
-
 A1:
 
+CHANGES TO THREAD STRUCT:
+struct list donors; // List of potential donors to donate priority to thread blocking it with lower priority
+struct list_elem donor_elem; // Element in the list of potential donors
+struct thread* locking_thread; // Thread holding a lock needed by thread with higher priority 
+int old_priority; // Initial priority of thread
+int64_t waketick; // Number of ticks before thread is active
+struct lock *blocked;     // Lock that blocking the current thread 
 
-struct list_elem donors;
-struct list_elem donor_elem;
-struct thread* locking_thread; 
-enum intr_level old_level = intr_disable ();
-int old_priority;
+
+---- ALGORITHMS ----
+
+>> A2: Briefly describe what happens in a call to your timer_sleep(),
+>> including the effects of the timer interrupt handler.
+
+timer_sleep() creates a new thread called which is assigned to the current thread. 
+We then assign the thread a wake up time, add it the list of threads, and end by blocking the thread.
+
+
+>> A3: What steps are taken to minimize the amount of time spent in
+>> the timer interrupt handler?
+
+Time spent in the timer interrupt handler is minimized by the head of the 
+list of threads always being the thread with the soonest wake up time. 
+Therefore, when we’re checking the last to see if the duration of time assigned to a thread 
+has passed we’re only looking at the first element. Our interrupt handler is only comparing 
+the first element in the list per call.
+
+
+---- SYNCHRONIZATION ----
+
+>> A4: How are race conditions avoided when multiple threads call
+>> timer_sleep() simultaneously?
+
+Race conditions are avoided because any operation done onto the list won’t 
+include interrupts. Therefore, each operation is atomic which means it can simultaneously
+ read/write without being corrupted.
+
+
+>> A5: How are race conditions avoided when a timer interrupt occurs
+>> during a call to timer_sleep()?
+
+During a call to timer_sleep the timer interrupts are disabled. This prevents 
+any race conditions from happening.
+
+
+---- RATIONALE ----
+
+>> A6: Why did you choose this design?  In what ways is it superior to
+>> other designs that you considered?
+
+
+
+             PRIORITY SCHEDULING
+             ===================
+
+---- DATA STRUCTURES ----
+
+>> B1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+>>B1
+CHANGES TO THREAD STRUCT:
+struct list donors; // List of potential donors to donate priority to thread blocking it with lower priority
+struct list_elem donor_elem; // Element in the list of potential donors
+struct thread* locking_thread; // Thread holding a lock needed by thread with higher priority 
+int old_priority; // Initial priority of thread
+int64_t waketick; // Number of ticks before thread is active
+struct lock *blocked;     // Lock that blocking the current thread 
+
+>> B2: Explain the data structure used to track priority donation.
+
+We used a linked list to track nested donation of each thread, using a while loop to iterate through the list. 
+
 
 
 
 ---- ALGORITHMS ----
 
+>> B3: How do you ensure that the highest priority thread waiting for
+>> a lock, semaphore, or condition variable wakes up first?
 
-A2: timer_sleep() creates a new thread called which is assigned to the current thread. We then assign the thread a wake up time, add it the list of threads, and end by blocking the thread.
+We do this by adding all of the threads to a list and sort the list 
+by priority. In thread_unblock after the list is sorted, the next 
+thread is woken up.
 
+>> B4: Describe the sequence of events when a call to lock_acquire()
+>> causes a priority donation.  How is nested donation handled?
 
-A3: Time spent in the timer interrupt handler is minimized by the head of the list of threads always being the thread with the soonest wake up time. Therefore, when we’re checking the last to see if the duration of time assigned to a thread has passed we’re only looking at the first element. Our interrupt handler is only comparing the first element in the list per call.
+The donor element of the current thread is pushed to the front of 
+the locking thread's list of potential donors. The current thread
+is then locked. We use a temporary thread (that starts with current thread)
+and iterate through the linked list to check if the locking thread's priority 
+is smaller than the current threads priority. If so, we will set the locking thread's
+priority to the temporary thread's priority, then set the temporary thread equal to the
+locking thread and repeat until there is no locking thread. 
 
+>> B5: Describe the sequence of events when lock_release() is called
+>> on a lock that a higher-priority thread is waiting for.
+
+In the case that a higher priority thread is waiting for the lock,
+that thread is removed from the list of potential donors. We then have
+two potential cases. The first case is if this was the only donor. In this case,
+we set the current thread's priority back to its initial priority. If there are
+other donors in the list, then we take the donor with the highest priority and set
+the current thread's priority to that or back to the base priority, whichever is higher.
 
 ---- SYNCHRONIZATION ----
 
+>> B6: Describe a potential race in thread_set_priority() and explain
+>> how your implementation avoids it.  Can you use a lock to avoid
+>> this race?
 
-A4: Race conditions are avoided because any operation done onto the list won’t include interrupts. Therefore, each operation is atomic which means it can simultaneously read/write without being corrupted.
-
-
-A5: During a call to timer_sleep the timer interrupts are disabled. This prevents any race conditions from happening.
+A potential race condition could occur if an interrupt tries to write to 
+write to the threads priority at the same time we do. We avoid this by 
+disabling interrupts before we access the priority. We can't use a lock
+because an interrupt handler can not use locks. 
 
 
 ---- RATIONALE ----
 
+>> B7: Why did you choose this design?  In what ways is it superior to
+>> another design you considered?
 
-A6: We could have given each thread struct it’s own wait time. However, we would’ve had to update the timers count with every passing second. The advantage to our system is we’re only checking the head of the list (e.g. the next thread to wake up).
-
-
-
-
-PRIORITY SCHEDULING
-             ===================
-
-
----- DATA STRUCTURES ----
-
-
-
-
-B1:
+This design may not be the most effecient; however, it did make the most
+logical sense to understand the concepts of thread scheduling. The algorithms 
+used also matched closest to those described in the book and other resources provided. 
+Our design is superior to some we referenced as we added additional error checking to 
+allow our code to compile and run faster.

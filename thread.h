@@ -153,5 +153,6 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
+bool cmp_waketick(struct list_elem *first, struct list_elem *second, void *aux); // ADDED defines function
 bool priority_less(struct list_elem *first,struct list_elem *second, void *aux);
 #endif /* threads/thread.h */

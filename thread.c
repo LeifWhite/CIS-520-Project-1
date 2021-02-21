@@ -248,7 +248,6 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  //list_insert_ordered(&ready_list, &t->elem, priority_less, NULL);  t->status = THREAD_READY;
   list_push_back (&ready_list, &t->elem);
   list_sort (&ready_list, priority_less, NULL);
   t->status = THREAD_READY;
@@ -323,18 +322,8 @@ thread_yield (void)
   if (cur != idle_thread)
   {
     list_push_back(&ready_list, &cur->elem);
-    list_sort(&ready_list, priority_less, NULL);
     //BEGIN MODIFICATION
-    /*if (!list_empty(&ready_list))
-    {
-      int next_t_p = list_entry(list_front(&ready_list), struct thread, elem)->priority;
-      if(next_t_p>=cur->priority)
-      {
-        list_insert_ordered(&ready_list, &cur->elem, priority_less, NULL);
-        cur->status = THREAD_READY;
-        schedule();
-      }
-    }*/
+    list_sort(&ready_list, priority_less, NULL);
   }
 
   cur->status = THREAD_READY;
@@ -652,3 +641,13 @@ bool priority_less(struct list_elem *e1, struct list_elem *e2, void *aux)
 
   return fthread->priority > sthread->priority;
 }
+
+//ADDED METHOD
+bool cmp_waketick(struct list_elem *first, struct list_elem *second, void *aux)
+{
+  struct thread *fthread = list_entry (first, struct thread, elem); //ADDED sets first thread
+  struct thread *sthread = list_entry (second, struct thread, elem); //ADDED sets second thread
+
+  return fthread->waketick < sthread->waketick; //ADDED if first thread has less time before it goes than the second
+
+} 
