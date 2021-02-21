@@ -1,0 +1,82 @@
+﻿---- GROUP ----
+
+
+Leif White leifw@ksu.edu
+William Compton will12@ksu.edu
+Trevor Reynolds tjr2020@ksu.edu
+
+
+---- PRELIMINARIES ----
+
+
+>> If you have any preliminary comments on your submission, notes for
+>> the TA, or extra credit, please give them here.
+
+
+>> Please cite any offline or online sources you consulted while
+>> preparing your submission, other than the Pintos documentation,
+>> course text, lecture notes, and course staff.
+
+
+* https://github.com/Waqee/Pintos-Project-1
+
+
+                 ALARM CLOCK
+                 ===========
+
+
+---- DATA STRUCTURES ----
+
+
+>> A1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+
+A1:
+
+
+struct list_elem donors;
+struct list_elem donor_elem;
+struct thread* locking_thread; 
+enum intr_level old_level = intr_disable ();
+int old_priority;
+
+
+
+---- ALGORITHMS ----
+
+
+A2: timer_sleep() creates a new thread called which is assigned to the current thread. We then assign the thread a wake up time, add it the list of threads, and end by blocking the thread.
+
+
+A3: Time spent in the timer interrupt handler is minimized by the head of the list of threads always being the thread with the soonest wake up time. Therefore, when we’re checking the last to see if the duration of time assigned to a thread has passed we’re only looking at the first element. Our interrupt handler is only comparing the first element in the list per call.
+
+
+---- SYNCHRONIZATION ----
+
+
+A4: Race conditions are avoided because any operation done onto the list won’t include interrupts. Therefore, each operation is atomic which means it can simultaneously read/write without being corrupted.
+
+
+A5: During a call to timer_sleep the timer interrupts are disabled. This prevents any race conditions from happening.
+
+
+---- RATIONALE ----
+
+
+A6: We could have given each thread struct it’s own wait time. However, we would’ve had to update the timers count with every passing second. The advantage to our system is we’re only checking the head of the list (e.g. the next thread to wake up).
+
+
+
+
+PRIORITY SCHEDULING
+             ===================
+
+
+---- DATA STRUCTURES ----
+
+
+
+
+B1:
